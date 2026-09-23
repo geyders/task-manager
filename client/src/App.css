@@ -1,0 +1,112 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f6f8;
+}
+
+.app {
+  min-height: 100vh;
+  padding: 40px 20px;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+h1 {
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.task-form {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 30px;
+}
+
+.task-form input {
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 16px;
+}
+
+button {
+  padding: 10px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #222;
+  color: white;
+}
+
+.task-form button {
+  font-size: 16px;
+}
+
+.task-list {
+  display: grid;
+  gap: 15px;
+}
+
+.task {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.task h3 {
+  margin: 0 0 8px;
+}
+
+.task h3.done {
+  text-decoration: line-through;
+}
+
+.task p {
+  margin: 0 0 10px;
+  color: #666;
+}
+
+.status {
+  font-size: 14px;
+  color: #666;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.delete {
+  background: #c62828;
+}
+
+.message {
+  text-align: center;
+  color: #666;
+}
+
+@media (max-width: 600px) {
+  .task {
+    flex-direction: column;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .actions button {
+    flex: 1;
+  }
+}
