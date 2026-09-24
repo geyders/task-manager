@@ -4,5 +4,5 @@ import App from '../App';
 
 test('displays Task Manager title', () => {
   render(<App />);
-  expect(screen.getByText('Wrong Task Manager Title')).toBeInTheDocument();
+  expect(screen.getByText('Task Manager')).toBeInTheDocument();
 });
