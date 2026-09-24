@@ -91,7 +91,7 @@ jobs:
         run: docker build -t taskmanager-client:ci ./client
 
       - name: Scan server image with Trivy
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: 'taskmanager-server:ci'
           format: 'table'
@@ -101,7 +101,7 @@ jobs:
           severity: 'HIGH,CRITICAL'
 
       - name: Scan client image with Trivy
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: 'taskmanager-client:ci'
           format: 'table'
