@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: server-config
+  namespace: task-manager
+  labels:
+    app.kubernetes.io/part-of: task-manager
+    app: server
+data:
+  NODE_ENV: "production"
+  PORT: "5000"
