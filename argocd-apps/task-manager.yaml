@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: task-manager
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/geyders/task-manager.git
+    targetRevision: feature/k8s-manifests
+    path: charts/task-manager
+    helm:
+      valueFiles:
+        - values-minikube.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: task-manager
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

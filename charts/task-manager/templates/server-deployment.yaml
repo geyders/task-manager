@@ -1,0 +1,3 @@
+envFrom:
+  - secretRef:
+      name: {{ .Values.existingSecret | default (printf "%s-secret" (include "task-manager.fullname" .)) }}
