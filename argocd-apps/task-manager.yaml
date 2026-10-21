@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/geyders/task-manager.git
-    targetRevision: feature/k8s-manifests
+    targetRevision: lab5
     path: charts/task-manager
     helm:
       valueFiles:
