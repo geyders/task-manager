@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "task-manager.fullname" . }}-client
+  labels:
+    {{- include "task-manager.labels" . | nindent 4 }}
+    app: client
+spec:
+  replicas: {{ .Values.replicaCount.client }}
+  selector:
+    matchLabels:
+      {{- include "task-manager.selectorLabels" . | nindent 6 }}
+      app: client
+  template:
+    metadata:
+      labels:
+        {{- include "task-manager.selectorLabels" . | nindent 8 }}
+        app: client
+    spec:
+      containers:
+        - name: client
+          image: "{{ .Values.image.client.repository }}:{{ .Values.image.client.tag }}"
+          imagePullPolicy: {{ .Values.image.client.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.client.port }}
+          resources:
+            {{- toYaml .Values.resources.client | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.service.client.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.service.client.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 15

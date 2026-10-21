@@ -1,0 +1,14 @@
+{{- if .Values.persistence.mongo.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "task-manager.fullname" . }}-mongo-pvc
+  labels:
+    {{- include "task-manager.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.persistence.mongo.size }}
+{{- end }}

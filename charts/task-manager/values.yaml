@@ -1,0 +1,37 @@
+replicaCount:
+  server: 1
+  client: 1
+  mongo: 1
+
+image:
+  server:
+    repository: ghcr.io/geyders/task-manager-server
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  client:
+    repository: ghcr.io/geyders/task-manager-client
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  mongo:
+    repository: mongo
+    tag: "8"
+    pullPolicy: IfNotPresent
+
+service:
+  client:
+    type: NodePort
+    port: 80
+    nodePort: 30080
+  server:
+    type: ClusterIP
+    port: 5000
+
+config:
+  nodeEnv: "production"
+  port: "5000"
+
+secrets:
+  mongoRootUsername: "admin"
+  mongoRootPassword: "password123"
+
+existingSecret: ""

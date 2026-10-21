@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "task-manager.fullname" . }}-server
+  labels:
+    {{- include "task-manager.labels" . | nindent 4 }}
+    app: server
+spec:
+  replicas: {{ .Values.replicaCount.server }}
+  selector:
+    matchLabels:
+      {{- include "task-manager.selectorLabels" . | nindent 6 }}
+      app: server
+  template:
+    metadata:
+      labels:
+        {{- include "task-manager.selectorLabels" . | nindent 8 }}
+        app: server
+    spec:
+      containers:
+        - name: server
+          image: "{{ .Values.image.server.repository }}:{{ .Values.image.server.tag }}"
+          imagePullPolicy: {{ .Values.image.server.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.server.port }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "task-manager.fullname" . }}-server-config
+            - secretRef:
+                name: {{ include "task-manager.fullname" . }}-mongo-secret
+          resources:
+            {{- toYaml .Values.resources.server | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /api/tasks
+              port: {{ .Values.service.server.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/tasks
+              port: {{ .Values.service.server.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 20

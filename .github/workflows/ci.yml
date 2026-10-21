@@ -2,17 +2,26 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+    tags: ['v*.*.*']
   pull_request:
-    branches:
-      - main
+    branches: [main]
+
+# Скасовувати застарілі запуски PR; запуски на main (публікація) не скасовуються
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
-  packages: write
+
+env:
+  NODE_VERSION: 22
 
 jobs:
+  # ---------------------------------------------------------------
+  # Backend: lint -> build -> test (з MongoDB як service container)
+  # ---------------------------------------------------------------
   backend:
     name: Backend Build and Test
     runs-on: ubuntu-latest
@@ -22,6 +31,11 @@ jobs:
         image: mongo:8
         ports:
           - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
 
     steps:
       - name: Checkout repository
@@ -30,7 +44,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: server/package-lock.json
 
@@ -38,14 +52,30 @@ jobs:
         working-directory: server
         run: npm ci
 
+      # Статичний аналіз — блокуючий крок
+      - name: Lint
+        working-directory: server
+        run: npm run lint
+
+      # Скрипта build у сервера немає: перевіряємо синтаксис точки входу
       - name: Build
         working-directory: server
-        run: npm run build --if-present
+        run: |
+          npm run build --if-present
+          node --check src/server.js
 
       - name: Test
         working-directory: server
+        env:
+          NODE_ENV: test
+          PORT: 5000
+          MONGO_URL: mongodb://localhost:27017/task_manager
+          MONGO_TEST_URL: mongodb://localhost:27017/task_manager_test
         run: npm test
 
+  # ---------------------------------------------------------------
+  # Frontend: lint -> build -> test
+  # ---------------------------------------------------------------
   frontend:
     name: Frontend Build and Test
     runs-on: ubuntu-latest
@@ -57,7 +87,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: client/package-lock.json
 
@@ -77,80 +107,94 @@ jobs:
         working-directory: client
         run: npm test
 
+  # ---------------------------------------------------------------
+  # Збірка образів (локально, без публікації) + сканування Trivy
+  # ---------------------------------------------------------------
   docker-build:
-    name: Build and Scan Docker Images
+    name: Docker build (${{ matrix.service }})
     runs-on: ubuntu-latest
     needs:
       - backend
       - frontend
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [server, client]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build server image
-        run: docker build -t taskmanager-server:ci ./server
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Build client image
-        run: docker build -t taskmanager-client:ci ./client
-
-      - name: Scan server image with Trivy
-        uses: aquasecurity/trivy-action@v0.36.0
+      - name: Build image (local only)
+        uses: docker/build-push-action@v6
         with:
-          image-ref: 'taskmanager-server:ci'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'HIGH,CRITICAL'
+          context: ./${{ matrix.service }}
+          file: ./${{ matrix.service }}/Dockerfile
+          load: true
+          push: false
+          tags: taskmanager-${{ matrix.service }}:ci
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
-      - name: Scan client image with Trivy
-        uses: aquasecurity/trivy-action@v0.36.0
+      # Блокуючий крок: CRITICAL/HIGH з наявним виправленням валять збірку
+      - name: Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: 'taskmanager-client:ci'
-          format: 'table'
-          exit-code: '1'
+          image-ref: taskmanager-${{ matrix.service }}:ci
+          severity: CRITICAL,HIGH
           ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
 
+  # ---------------------------------------------------------------
+  # Публікація в GHCR: тільки push (не Pull Request)
+  # ---------------------------------------------------------------
   publish:
-    name: Publish Docker Images to GHCR
+    name: Publish (${{ matrix.service }})
     runs-on: ubuntu-latest
-    needs:
-      - docker-build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: docker-build
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [server, client]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Log in to GitHub Container Registry
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract image metadata
+      # Теги: sha-<commit> завжди; latest — лише для основної гілки
+      - name: Image metadata
         id: meta
-        run: |
-          echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}-${{ matrix.service }}
+          tags: |
+            type=sha,format=long
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
 
-      - name: Build and push server image
+      - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: ./server
+          context: ./${{ matrix.service }}
+          file: ./${{ matrix.service }}/Dockerfile
           push: true
-          tags: |
-            ghcr.io/${{ steps.meta.outputs.owner }}/taskmanager-server:${{ github.sha }}
-            ghcr.io/${{ steps.meta.outputs.owner }}/taskmanager-server:latest
-
-      - name: Build and push client image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./client
-          push: true
-          tags: |
-            ghcr.io/${{ steps.meta.outputs.owner }}/taskmanager-client:${{ github.sha }}
-            ghcr.io/${{ steps.meta.outputs.owner }}/taskmanager-client:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service }}

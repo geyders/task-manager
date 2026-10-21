@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "task-manager.fullname" . }}-client
+  labels:
+    app: client
+spec:
+  replicas: {{ .Values.replicaCount.client }}
+  selector:
+    matchLabels:
+      app: client
+  template:
+    metadata:
+      labels:
+        app: client
+    spec:
+      containers:
+        - name: client
+          image: "{{ .Values.image.client.repository }}:{{ .Values.image.client.tag }}"
+          imagePullPolicy: {{ .Values.image.client.pullPolicy }}
+          ports:
+            - containerPort: 80

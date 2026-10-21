@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "task-manager.fullname" . }}-mongo-service
+  labels:
+    {{- include "task-manager.labels" . | nindent 4 }}
+    app: mongo
+spec:
+  type: {{ .Values.service.mongo.type }}
+  selector:
+    {{- include "task-manager.selectorLabels" . | nindent 4 }}
+    app: mongo
+  ports:
+    - port: {{ .Values.service.mongo.port }}
+      targetPort: {{ .Values.service.mongo.port }}

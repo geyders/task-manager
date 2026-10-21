@@ -1,0 +1,22 @@
+replicaCount:
+  server: 1
+  client: 1
+
+config:
+  nodeEnv: "development"
+
+resources:
+  server:
+    requests:
+      cpu: 100m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
+  client:
+    requests:
+      cpu: 100m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi

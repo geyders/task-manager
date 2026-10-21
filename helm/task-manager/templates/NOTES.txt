@@ -1,0 +1,13 @@
+Застосунок {{ .Release.Name }} успішно встановлено!
+
+1. Отримати список ресурсів:
+   kubectl get all -n {{ .Release.Namespace }}
+
+2. Доступ до вебінтерфейсу:
+{{- if eq .Values.service.client.type "NodePort" }}
+   export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "task-manager.fullname" . }}-client-service)
+   export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+   echo http://$NODE_IP:$NODE_PORT
+{{- else }}
+   kubectl port-forward svc/{{ include "task-manager.fullname" . }}-client-service 3000:80 -n {{ .Release.Namespace }}
+{{- end }}

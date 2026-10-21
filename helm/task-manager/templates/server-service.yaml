@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: server-service
+  labels:
+    {{- include "task-manager.labels" . | nindent 4 }}
+    app: server
+spec:
+  type: {{ .Values.service.server.type }}
+  selector:
+    {{- include "task-manager.selectorLabels" . | nindent 4 }}
+    app: server
+  ports:
+    - port: {{ .Values.service.server.port }}
+      targetPort: {{ .Values.service.server.port }}

@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "task-manager.fullname" . }}-mongo
+  labels:
+    {{- include "task-manager.labels" . | nindent 4 }}
+    app: mongo
+spec:
+  replicas: {{ .Values.replicaCount.mongo }}
+  selector:
+    matchLabels:
+      {{- include "task-manager.selectorLabels" . | nindent 6 }}
+      app: mongo
+  template:
+    metadata:
+      labels:
+        {{- include "task-manager.selectorLabels" . | nindent 8 }}
+        app: mongo
+    spec:
+      containers:
+        - name: mongo
+          image: "{{ .Values.image.mongo.repository }}:{{ .Values.image.mongo.tag }}"
+          imagePullPolicy: {{ .Values.image.mongo.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.mongo.port }}
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "task-manager.fullname" . }}-mongo-secret
+                  key: MONGO_ROOT_USERNAME
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "task-manager.fullname" . }}-mongo-secret
+                  key: MONGO_ROOT_PASSWORD
+          volumeMounts:
+            - name: mongo-data
+              mountPath: /data/db
+          resources:
+            {{- toYaml .Values.resources.mongo | nindent 12 }}
+          readinessProbe:
+            exec:
+              command:
+                - mongosh
+                - --quiet
+                - --eval
+                - "db.runCommand({ ping: 1 })"
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command:
+                - mongosh
+                - --quiet
+                - --eval
+                - "db.runCommand({ ping: 1 })"
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 5
+      volumes:
+        - name: mongo-data
+          {{- if .Values.persistence.mongo.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "task-manager.fullname" . }}-mongo-pvc
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
