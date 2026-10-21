@@ -1,15 +1,18 @@
-existingSecret: "task-manager-secret"
+﻿replicaCount: 1
 
-image:
-  server:
-    repository: "ghcr.io/geyders/task-manager-server"
-    tag: "1.0.0"
-    pullPolicy: IfNotPresent
-  client:
-    repository: "ghcr.io/geyders/task-manager-client"
-    tag: "1.0.0"
-    pullPolicy: IfNotPresent
+mongo:
+  enabled: true
+  image: mongo:6.0
+  port: 27017
 
-replicaCount:
-  server: 1
-  client: 1
+server:
+  enabled: true
+  image: node:18-alpine
+  port: 5000
+  env:
+    MONGO_URI: "mongodb://mongo:27017/taskmanager"
+
+client:
+  enabled: true
+  image: nginx:alpine
+  port: 80

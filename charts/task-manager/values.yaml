@@ -1,0 +1,18 @@
+﻿replicaCount: 1
+
+mongo:
+  enabled: true
+  image: mongo:6.0
+  port: 27017
+
+server:
+  enabled: true
+  image: node:18-alpine
+  port: 5000
+  env:
+    MONGO_URI: "mongodb://mongo:27017/taskmanager"
+
+client:
+  enabled: true
+  image: nginx:alpine
+  port: 80
