@@ -1,5 +1,9 @@
 ﻿replicaCount: 1
 
+secrets:
+  mongoRootUsername: "admin"
+  mongoRootPassword: "password123"
+
 mongo:
   enabled: true
   image: mongo:6.0
@@ -10,7 +14,7 @@ server:
   image: node:18-alpine
   port: 5000
   env:
-    MONGO_URI: "mongodb://mongo:27017/taskmanager"
+    MONGO_URI: "mongodb://admin:password123@mongo:27017/taskmanager?authSource=admin"
 
 client:
   enabled: true
